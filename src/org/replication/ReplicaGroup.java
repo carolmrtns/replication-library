@@ -1,6 +1,7 @@
 package org.replication;
 
 import java.util.List;
+import java.util.concurrent.Semaphore;
 
 import org.jgroups.Address;
 import org.jgroups.CompositeMessage;
@@ -13,29 +14,14 @@ import org.jgroups.View;
 public class ReplicaGroup implements Receiver {
 
 	JChannel channelReplica;
-	ClientGroup clientGroup;
 	RocksDatabase rocksDatabase;
-	ChannelClient channelClientInstance;
+	String response;
+	Semaphore semaphore;
 
-	public ReplicaGroup() {
-		this.rocksDatabase = new RocksDatabase();
-		this.channelClientInstance = ChannelClient.getInstance();
-		this.channelClientInstance.setChannel("Client");
-//		this.clientGroup = ClientGroup.getInstance();
-	}
-
-//	public static ReplicaGroup getInstance() {
-//		if(instance == null) {
-//			instance = new ReplicaGroup();
-//		}
-//		return instance;
-//	}
-
-	public void connectChannel() {
+	public ReplicaGroup(String groupName) {
 		try {
-			this.channelReplica = new JChannel().setReceiver(this).connect("Replicator");
-//			this.clientGroup.setReplicaChannel(this.channelReplica);
-			this.channelClientInstance.setReplicaChannel(this.channelReplica);
+			this.rocksDatabase = new RocksDatabase();
+			this.channelReplica = new JChannel().setReceiver(this).connect(groupName);
 		} catch (Exception e) {
 			System.out.println("Erro ao conectar no grupo. Mensagem: " + e.getMessage());
 		}
@@ -46,57 +32,18 @@ public class ReplicaGroup implements Receiver {
 	}
 
 	public void receive(Message msg) {
-//		eventHandler(msg);
-		System.out.println("::::ReplicaGroup::::");
-		System.out.println(msg.getSrc() + ": " + msg.getObject());
+//		System.out.println(msg.getSrc() + ": " + msg.getObject());
+		eventHandler(msg);
 	}
 
-	public void open(String name) {
-		Message method = new ObjectMessage(null, "open");
-		Message nameMsg = new ObjectMessage(null, name);
-		Message msg = new CompositeMessage(null).add(method).add(nameMsg);
+	public void broadcast(Message msg) {
 		try {
 			this.channelReplica.send(msg);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-
-	public void put(String key, String value) {
-		Message method = new ObjectMessage(null, "put");
-		Message keyMsg = new ObjectMessage(null, key);
-		Message valueMsg = new ObjectMessage(null, value);
-		Message msg = new CompositeMessage(null).add(method).add(keyMsg).add(valueMsg);
-		try {
-			this.channelReplica.send(msg);
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-
-	public void get(String key) {
-		Message method = new ObjectMessage(null, "get");
-		Message keyMsg = new ObjectMessage(null, key);
-		Message msg = new CompositeMessage(null).add(method).add(keyMsg);
-		try {
-			this.channelReplica.send(msg);
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-
-	public void delete(String key) {
-		Message method = new ObjectMessage(null, "delete");
-		Message keyMsg = new ObjectMessage(null, key);
-		Message msg = new CompositeMessage(null).add(method).add(keyMsg);
-		try {
-			this.channelReplica.send(msg);
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.out.println("Exceção ao disseminar mensagem no grupo");
+			System.out.println("Causa: " + e.getCause());
+			System.out.println("Mensagem: " + e.getMessage());
+			System.out.println("StackTrace: " + e.getStackTrace());
 		}
 	}
 
@@ -124,23 +71,51 @@ public class ReplicaGroup implements Receiver {
 		case "open":
 			String name = compositeMessage.get(1).getObject();
 			int number = getIndexByMember();
-			this.rocksDatabase.open(name + "-" + number);
+			System.out.println(":::Valor para OPEN:::");
+			System.out.println("Name: " + name);
+			this.rocksDatabase.open("rocks-db-" + number + "/" + name);
 			break;
 		case "delete":
 			String key = compositeMessage.get(1).getObject();
+			System.out.println("1 key: " + key);
 			this.rocksDatabase.delete(key);
 			break;
 		case "put":
 			key = compositeMessage.get(1).getObject();
 			String value = compositeMessage.get(2).getObject();
+			System.out.println(":::Valores para PUT:::");
+			System.out.println("Key: " + key + " | Value: " + value);
 			this.rocksDatabase.put(key, value);
 			break;
 		case "get":
 			key = compositeMessage.get(1).getObject();
-			this.rocksDatabase.get(key);
+			String response = this.rocksDatabase.get(key);
+			setResponse(response);
+			this.semaphore.release();
+			System.out.println(":::Retorno do GET:::");
+			System.out.println("Chave: " + key + " | Valor: " + response);
 			break;
+		case "close":
+			this.rocksDatabase.close();
 		default:
 			break;
 		}
 	}
+
+	public void setResponse(String response) {
+		this.response = response;
+	}
+
+	public String getResponse() {
+		return this.response;
+	}
+
+	public void setSemaphore(Semaphore semaphore) {
+		this.semaphore = semaphore;
+	}
+
+	public Message setMessage(String message) {
+		return new ObjectMessage(null, message);
+	}
+
 }
