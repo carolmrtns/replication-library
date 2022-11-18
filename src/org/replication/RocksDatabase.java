@@ -3,6 +3,7 @@ package org.replication;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.concurrent.Semaphore;
 
 import org.rocksdb.DBOptions;
 import org.rocksdb.Options;
@@ -21,14 +22,16 @@ public class RocksDatabase {
 	public void open(String name) {
 		final Options options = new Options();
 		options.setCreateIfMissing(true);
-		this.dbDir = new File("/tmp/rocks-db", name);
+		this.dbDir = new File("/tmp/", name);
 		try {
 			Files.createDirectories(dbDir.getParentFile().toPath());
 			Files.createDirectories(dbDir.getAbsoluteFile().toPath());
 			this.db = RocksDB.open(options, this.dbDir.getAbsolutePath());
-		} catch (IOException | RocksDBException ex) {
-			System.out.println("Erro ao inicializar RocksDB, confira configurações e permissões, excessão: "
-					+ ex.getCause() + ", mensagem: " + ex.getMessage() + ", StackTrace: " + ex.getStackTrace());
+		} catch (IOException | RocksDBException e) {
+			System.out.println("Exceção ao inicializar RocksDB, confira configurações e permissões");
+			System.out.println("Causa: " + e.getCause());
+			System.out.println("Mensagem: " + e.getMessage());
+			System.out.println("StackTrace: " + e.getStackTrace());
 		}
 	}
 
@@ -36,29 +39,43 @@ public class RocksDatabase {
 		try {
 			this.db.put(key.getBytes(), value.getBytes());
 		} catch (RocksDBException e) {
-			System.out.println(
-					"Erro ao salvar entrada no RocksDB, causa: " + e.getCause() + ", mensagem: " + e.getMessage());
+			System.out.println("Exceção ao salvar entrada no RocksDB");
+			System.out.println("Causa: " + e.getCause());
+			System.out.println("Mensagem: " + e.getMessage());
+			System.out.println("StackTrace: " + e.getStackTrace());
 		}
 	}
-	
-	public void get(String key) {
+
+	public String get(String key) {
+		String result = "";
 		try {
-			String value = new String(this.db.get(key.getBytes()));
-			System.out.println("Chave: " + key + " | Valor: " + value);
+			byte[] bytes = this.db.get(key.getBytes());
+			if (bytes == null) {
+				return "";
+			}
+			result = new String(bytes);
 		} catch (RocksDBException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.out.println("Exceção ao recuperar valor do RocksDB");
+			System.out.println("Causa: " + e.getCause());
+			System.out.println("Mensagem: " + e.getMessage());
+			System.out.println("StackTrace: " + e.getStackTrace());
 		}
+		return result;
 	}
-	
+
 	public void delete(String key) {
-		System.out.println("Excluindo chave " + key);
 		try {
 			this.db.delete(key.getBytes());
 		} catch (RocksDBException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.out.println("Exceção ao deletar valor da chave do RocksDB");
+			System.out.println("Causa: " + e.getCause());
+			System.out.println("Mensagem: " + e.getMessage());
+			System.out.println("StackTrace: " + e.getStackTrace());
 		}
+	}
+
+	public void close() {
+		this.db.close();
 	}
 
 }
