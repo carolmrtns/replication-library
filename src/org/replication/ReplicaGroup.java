@@ -57,7 +57,7 @@ public class ReplicaGroup implements Receiver {
 		for (int i = 0; i < members.size(); i++) {
 			Address member = members.get(i);
 			if (this.channelReplica.getAddress().compareTo(member) == 0) {
-				System.out.println("Index retornado: " + i);
+//				System.out.println("Index retornado: " + i);
 				return i;
 			}
 		}
@@ -71,20 +71,21 @@ public class ReplicaGroup implements Receiver {
 		case "open":
 			String name = compositeMessage.get(1).getObject();
 			int number = getIndexByMember();
-			System.out.println(":::Valor para OPEN:::");
-			System.out.println("Name: " + name);
+//			System.out.println(":::Valor para OPEN:::");
+//			System.out.println("Name: " + name);
 			this.rocksDatabase.open("rocks-db-" + number + "/" + name);
 			break;
 		case "delete":
 			String key = compositeMessage.get(1).getObject();
-			System.out.println("1 key: " + key);
+//			System.out.println(":::Valor para DELETE:::");
+//			System.out.println("Chave: " + key);
 			this.rocksDatabase.delete(key);
 			break;
 		case "put":
 			key = compositeMessage.get(1).getObject();
 			String value = compositeMessage.get(2).getObject();
-			System.out.println(":::Valores para PUT:::");
-			System.out.println("Key: " + key + " | Value: " + value);
+//			System.out.println(":::Valores para PUT:::");
+//			System.out.println("Key: " + key + " | Value: " + value);
 			this.rocksDatabase.put(key, value);
 			break;
 		case "get":
