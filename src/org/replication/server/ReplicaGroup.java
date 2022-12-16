@@ -1,5 +1,8 @@
-package org.replication;
+package org.replication.server;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.List;
 import java.util.concurrent.Semaphore;
 
@@ -10,6 +13,7 @@ import org.jgroups.Message;
 import org.jgroups.ObjectMessage;
 import org.jgroups.Receiver;
 import org.jgroups.View;
+import org.replication.repository.RocksDatabase;
 
 public class ReplicaGroup implements Receiver {
 
@@ -71,30 +75,32 @@ public class ReplicaGroup implements Receiver {
 		case "open":
 			String name = compositeMessage.get(1).getObject();
 			int number = getIndexByMember();
-//			System.out.println(":::Valor para OPEN:::");
-//			System.out.println("Name: " + name);
-			this.rocksDatabase.open("rocks-db-" + number + "/" + name);
+			this.rocksDatabase.open(name + "-" + number);
 			break;
 		case "delete":
 			String key = compositeMessage.get(1).getObject();
-//			System.out.println(":::Valor para DELETE:::");
-//			System.out.println("Chave: " + key);
 			this.rocksDatabase.delete(key);
 			break;
 		case "put":
 			key = compositeMessage.get(1).getObject();
 			String value = compositeMessage.get(2).getObject();
-//			System.out.println(":::Valores para PUT:::");
-//			System.out.println("Key: " + key + " | Value: " + value);
 			this.rocksDatabase.put(key, value);
 			break;
 		case "get":
 			key = compositeMessage.get(1).getObject();
-			String response = this.rocksDatabase.get(key);
-			setResponse(response);
-			this.semaphore.release();
+			byte[] response = this.rocksDatabase.get(key);
+			
+			if(response != null) {
+				setResponse(new String(response));	
+			}else {
+				setResponse("");
+			}
+			
 			System.out.println(":::Retorno do GET:::");
-			System.out.println("Chave: " + key + " | Valor: " + response);
+			System.out.println("Chave: " + key + " | Valor: " + response);			
+			
+			this.semaphore.release();
+
 			break;
 		case "close":
 			this.rocksDatabase.close();
