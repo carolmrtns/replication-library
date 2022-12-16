@@ -1,4 +1,4 @@
-package org.replication;
+package org.replication.repository;
 
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -8,12 +8,11 @@ import java.net.Socket;
 
 import org.replication.models.MessageSocket;
 
-public class ReplicatedRocksDB {
+public class ReplicatedRocksDB implements MethodsRockDB{
 
-	Socket socket;
-	OutputStream outputStream;
-	ObjectOutputStream objectOutputStream;
-	DataInputStream dataInputStream;
+	private Socket socket;
+	private ObjectOutputStream objectOutputStream;
+	private DataInputStream dataInputStream;
 
 	public ReplicatedRocksDB(String address, int port) {
 		try {
@@ -55,12 +54,13 @@ public class ReplicatedRocksDB {
 		}
 	}
 
-	public String get(String key) {
+	public byte[] get(String key) {
 		try {
 			MessageSocket messageSocket = new MessageSocket("get");
 			messageSocket.setKey(key);
 			this.objectOutputStream.writeObject(messageSocket);
-			return this.dataInputStream.readUTF();
+			String value = this.dataInputStream.readUTF();
+			return value.getBytes();
 		} catch (IOException ioe) {
 			System.out.println("Exceção ao enviar solicitação para obter valor via Socket");
 			System.out.println("Causa: " + ioe.getCause());

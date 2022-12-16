@@ -2,6 +2,9 @@ package org.replication;
 
 import java.io.IOException;
 
+import org.replication.server.ReplicaGroup;
+import org.replication.server.Server;
+
 public class ReplicationLibrary {
 
 	public static void main(String[] args) {

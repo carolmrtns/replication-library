@@ -1,4 +1,4 @@
-package org.replication;
+package org.replication.server;
 
 import java.io.IOException;
 import java.net.ServerSocket;
